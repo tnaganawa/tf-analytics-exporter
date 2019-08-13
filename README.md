@@ -2,14 +2,12 @@
 
 ```
 # pip install prometheus_client requests
-# python tf-analytics-exporter.py 1234 192.168.122.11
-arg:
-port-number, TF-analytics-ip
+# ./tf-analytics-exporter.py
 ```
  
   
 ```
-# curl 127.0.0.1:1234
+# curl 127.0.0.1:11234
  -> see if metrics are given
 ```
    
