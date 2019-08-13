@@ -7,9 +7,10 @@ import requests
 from prometheus_client import start_http_server, Metric, REGISTRY
 
 class JsonCollector(object):
-  def __init__(self, analytics_api_ip, control_api_ip):
+  def __init__(self, analytics_api_ip, control_api_ip, config_api_ip):
     self._endpoint = 'http://' + analytics_api_ip + ':8081/analytics/uves/vrouter/*?flat'
     self.control_api_ip = control_api_ip
+    self.config_api_ip = config_api_ip
 
   def collect(self):
 
@@ -70,6 +71,25 @@ class JsonCollector(object):
     num_of_xmpp_calls=os.popen ("ist.py ctr xmpp stats -f text | grep -w calls | awk -F: '{sum+=$2}; END{print sum}'").read()
     metric.add_sample('num_of_xmpp_calls', value=num_of_xmpp_calls, labels={"host_id": self.control_api_ip})
 
+    # configdb
+    config_api_url = 'http://' + self.config_api_ip + ':8082/'
+
+    response = json.loads(requests.get(config_api_url + 'virtual-networks').content.decode('UTF-8'))
+    num_of_virtual_networks = len(response['virtual-networks'])
+    metric.add_sample('num_of_virtual_networks', value=num_of_virtual_networks, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'logical-routers').content.decode('UTF-8'))
+    num_of_logical_routers = len(response['logical-routers'])
+    metric.add_sample('num_of_logical_routers', value=num_of_logical_routers, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'projects').content.decode('UTF-8'))
+    num_of_projects = len(response['projects'])
+    metric.add_sample('num_of_projects', value=num_of_projects, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'virtual-machine-interfaces').content.decode('UTF-8'))
+    num_of_virtual_machine_interfaces = len(response['virtual-machine-interfaces'])
+    metric.add_sample('num_of_virtual_machine_interfaces', value=num_of_virtual_machine_interfaces, labels={"host_id": self.config_api_ip})
+
     yield metric
 
   
@@ -80,8 +100,9 @@ if __name__ == '__main__':
   start_http_server(int(http_port))
   analytics_api_ip=os.popen("netstat -ntlp | grep -w 8081 | awk '{print $4}' | awk -F: '{print $1}'").read().rstrip()
   control_api_ip=analytics_api_ip ## temporary
+  config_api_ip=analytics_api_ip ## temporary
   #print(analytics_api_ip)
-  REGISTRY.register(JsonCollector(analytics_api_ip, control_api_ip))
+  REGISTRY.register(JsonCollector(analytics_api_ip, control_api_ip, config_api_ip))
 
   while True: time.sleep(1)
 
