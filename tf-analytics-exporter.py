@@ -7,8 +7,9 @@ import requests
 from prometheus_client import start_http_server, Metric, REGISTRY
 
 class JsonCollector(object):
-  def __init__(self, endpoint):
-    self._endpoint = 'http://' + endpoint + ':8081/analytics/uves/vrouter/*?flat'
+  def __init__(self, analytics_api_ip, control_api_ip):
+    self._endpoint = 'http://' + analytics_api_ip + ':8081/analytics/uves/vrouter/*?flat'
+    self.control_api_ip = control_api_ip
 
   def collect(self):
 
@@ -21,8 +22,8 @@ class JsonCollector(object):
     response = json.loads(requests.get(url).content.decode('UTF-8'))
     #print (response)
   
-    metric = Metric('vrouter_metrics',
-        'metrics for vrouters', 'summary')
+    metric = Metric('tungstenfabric_metrics',
+        'metrics for tungsten fabric', 'summary')
 
     # vRouter UVE
     for entry in response['value']:
@@ -53,6 +54,22 @@ class JsonCollector(object):
       metric.add_sample('num_of_route_tables', value=num_of_rt, labels={"host_id": name})
       metric.add_sample('num_of_routes', value=num_of_routes, labels={"host_id": name})
 
+    # control introspect
+    num_of_vns=os.popen ("ist.py ctr route summary -f text | grep -w name | wc -l").read()
+    metric.add_sample('num_of_route_tables', value=num_of_vns, labels={"host_id": self.control_api_ip})
+    num_of_routes=os.popen ("ist.py ctr route summary -f text | grep -w prefixes | awk -F: '{sum+=$2}; END{print sum}'").read()
+    metric.add_sample('num_of_routes', value=num_of_routes, labels={"host_id": self.control_api_ip})
+    num_of_routing_instances=os.popen ("ist.py ctr ri -f text | grep '^  name' | wc -l").read()
+    metric.add_sample('num_of_routing_instances', value=num_of_routing_instances, labels={"host_id": self.control_api_ip})
+    num_of_bgp_blocks=os.popen ("ist.py ctr bgp_stats | grep -w blocked_count | awk -F: '{sum+=$2}; END{print sum}'").read()
+    metric.add_sample('num_of_bgp_blocks', value=num_of_bgp_blocks, labels={"host_id": self.control_api_ip})
+    num_of_bgp_calls=os.popen ("ist.py ctr bgp_stats | grep -w calls | awk -F: '{sum+=$2}; END{print sum}'").read()
+    metric.add_sample('num_of_bgp_calls', value=num_of_bgp_calls, labels={"host_id": self.control_api_ip})
+    num_of_xmpp_blocks=os.popen ("ist.py ctr xmpp stats -f text | grep -w blocked_count | awk -F: '{sum+=$2}; END{print sum}'").read()
+    metric.add_sample('num_of_xmpp_blocks', value=num_of_xmpp_blocks, labels={"host_id": self.control_api_ip})
+    num_of_xmpp_calls=os.popen ("ist.py ctr xmpp stats -f text | grep -w calls | awk -F: '{sum+=$2}; END{print sum}'").read()
+    metric.add_sample('num_of_xmpp_calls', value=num_of_xmpp_calls, labels={"host_id": self.control_api_ip})
+
     yield metric
 
   
@@ -62,8 +79,9 @@ if __name__ == '__main__':
   http_port=11234
   start_http_server(int(http_port))
   analytics_api_ip=os.popen("netstat -ntlp | grep -w 8081 | awk '{print $4}' | awk -F: '{print $1}'").read().rstrip()
-  print(analytics_api_ip)
-  REGISTRY.register(JsonCollector(analytics_api_ip))
+  control_api_ip=analytics_api_ip ## temporary
+  #print(analytics_api_ip)
+  REGISTRY.register(JsonCollector(analytics_api_ip, control_api_ip))
 
   while True: time.sleep(1)
 
