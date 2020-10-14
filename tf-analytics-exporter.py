@@ -8,27 +8,238 @@ from prometheus_client import start_http_server, Metric, REGISTRY
 
 class JsonCollector(object):
   def __init__(self, analytics_api_ip, control_api_ip, config_api_ip):
-    self._endpoint = 'http://' + analytics_api_ip + ':8081/analytics/uves/vrouter/*?flat'
+    self._endpoint = 'http://' + analytics_api_ip + ':8081/analytics/uves/'
+    self.vrouter_endpoint = self._endpoint + 'vrouter/*?flat'
+    self.control_endpoint = self._endpoint + 'control-node/*?flat'
+    self.config_database_endpoint = self._endpoint + 'config-database-node/*?flat'
     self.control_api_ip = control_api_ip
     self.config_api_ip = config_api_ip
 
   def collect(self):
 
-    ##
-    # get metrics for vrouters from analytics:
-    ##
-    url = self._endpoint
-
-    # Fetch the JSON
-    response = json.loads(requests.get(url).content.decode('UTF-8'))
-    #print (response)
-  
     metric = Metric('tungstenfabric_metrics',
         'metrics for tungsten fabric', 'summary')
 
+    ##
+    # config-database node
+    ##
+    url = self.config_database_endpoint
+    response = json.loads(requests.get(url).content.decode('UTF-8'))
+  
+    for entry in response['value']:
+      name = entry["name"]
+      value = entry["value"]
+
+      ##
+      # system_defined_pending_cassandra_compaction_tasks
+      ##
+      pending_compaction_tasks=value.get("CassandraStatusData").get("cassandra_compaction_task").get("pending_compaction_tasks")
+      metric.add_sample('pending_compaction_tasks', value=pending_compaction_tasks, labels={"host_id": name})
+
+    ##
+    # control-node
+    ##
+    url = self.control_endpoint
+    response = json.loads(requests.get(url).content.decode('UTF-8'))
+  
+    for entry in response['value']:
+      name = entry["name"]
+      value = entry["value"]
+
+      ##
+      # system_defined_conf_in_correct
+      ##
+      contrail_config=value.get("ContrailConfig")
+      if contrail_config == None
+        tmp = 1
+      else:
+        tmp = 0
+      metric.add_sample('system_defined_conf_incorrect', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_node_status
+      ##
+      node_status=value.get("NodeStatus")
+      if node_status == None
+        tmp = 1
+      else:
+        tmp = 0
+      metric.add_sample('system_defined_node_status', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_partial_sysinfo
+      ##
+      node_status_build_info=value.get("NodeStatus").get("build_info")
+      if node_status_build_info == None
+        tmp = 1
+      else:
+        tmp = 0
+      metric.add_sample('system_defined_parital_sysinfo', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_package_version_mismatch
+      ##
+      running_package_version=value.get("NodeStatus").get("running_package_version")
+      installed_package_version=value.get("NodeStatus").get("installed_package_version")
+      if running_package_version == installed_package_version
+        tmp = 0
+      else:
+        tmp = 1
+      metric.add_sample('system_defined_conf_incorrect', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_core_files
+      ##
+      all_core_file_list=value.get("NodeStatus").get("all_core_file_list")
+      if all_core_file_list == None
+        tmp = 0
+      else:
+        if len (all_core_file_list) > 0:
+          tmp = 1
+        else:
+          tmp = 0
+      metric.add_sample('system_defined_core_files', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_process_connectivity
+      ##
+      node_status_process_status=value.get("process_status")
+      if node_status_process_status == None
+        tmp = 1
+      else:
+        tmp = 0
+      metric.add_sample('system_defined_process_connectivity', value=tmp, labels={"host_id": name})
+
+      process_status_dict = node_status_process_status
+      for process in process_status_dict:
+        process_status = process_status_dict[process].get("state")
+        if process_status == 'Functional':
+          tmp = 1
+        else:
+          tmp = 0
+        metric.add_sample('process_status_' + process, value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_process_status
+      ##
+      node_status_process_info=value.get("process_info")
+      if node_status_process_info == None
+        tmp = 1
+      else:
+        tmp = 0
+      metric.add_sample('system_defined_process_status', value=tmp, labels={"host_id": name})
+
+      process_status_dict = node_status_process_info
+      for process in process_status_dict:
+        process_info = process_status_dict[process].get("process_state")
+        if process_info == 'PROCESS_STATE_RUNNING':
+          tmp = 1
+        else:
+          tmp = 0
+        metric.add_sample('process_info_' + process, value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_address_mismatch_control
+      ##
+      bgp_router_param_address=value.get("ContrailConfig").get("elements").get("bgp_router_parameters").get("address")
+      bgp_router_ip_list=value.get("BgpRouterState").get("bgp_router_ip_list")
+      if bgp_router_param_address in bgp_router_ip_list:
+        tmp = 0
+      else:
+        tmp = 1
+      metric.add_sample('system_defined_address_mismatch_control', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_disk_usage_high / critical
+      ##
+      disk_usage_info_dict=value.get("NodeStatus").get("disk_usage_info")
+      for mountpoint in disk_usage_info_dict:
+        disk_usage = disk_usage_info_dict[mountpoint].get("percentage_partition_space_used")
+      metric.add_sample('disk_usage_' + mountpoint, value=int(disk_usage), labels={"host_id": name})
+
+      ##
+      # system_defined_bgp_connectivity
+      ##
+      num_up_bgp_peer=value.get("BgpRouterState").get("num_up_bgp_peer")
+      num_bgp_peer=value.get("BgpRouterState").get("num_bgp_peer")
+      metric.add_sample('num_up_bgp_peer', value=num_up_bgp_peer, labels={"host_id": name})
+      metric.add_sample('num_bgp_peer', value=num_bgp_peer, labels={"host_id": name})
+
+      ##
+      # system_defined_xmpp_connectivity
+      ##
+      num_up_xmpp_peer=value.get("BgpRouterState").get("num_up_xmpp_peer")
+      num_xmpp_peer=value.get("BgpRouterState").get("num_xmpp_peer")
+      metric.add_sample('num_up_xmpp_peer', value=num_up_xmpp_peer, labels={"host_id": name})
+      metric.add_sample('num_xmpp_peer', value=num_xmpp_peer, labels={"host_id": name})
+
+    ###
+    # system_defined_prouter_connectivity: not added
+    ###
+    ###
+    # system_defined_prouter_tsn_connectivity: not added
+    ###
+    ###
+    # system_defined_storage_cluster_state: not added
+    ###
+    ###
+    # system_defined_xmpp_close_reason: not added
+    ###
+
+
+    ##
+    # get metrics for vrouters from analytics:
+    ##
+    url = self.vrouter_endpoint
+    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    #print (response)
+  
     # vRouter UVE
     for entry in response['value']:
       name = entry["name"]
+      value = entry["value"]
+
+
+      ##
+      # system_defined_address_mismatch_compute
+      ##
+      virtual_router_ip_address=value.get("ContrailConfig").get("elements").get("virtual_router_ip_address")
+      control_ip=value.get("VrouterAgent").get("control_ip")
+      if virtual_router_ip_address == control_ip:
+        tmp = 0
+      else:
+        tmp = 1
+      metric.add_sample('system_defined_address_mismatch_compute', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_vrouter_limit_exceeded
+      ##
+      res_limit=value.get("VrouterAgent").get("res_limit")
+      if res_limit == True:
+        tmp = 1
+      else:
+        tmp = 0
+      metric.add_sample('system_defined_vrouter_limit_exceeded', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_vrouter_table_limit_exceeded
+      ##
+      res_table_limit=value.get("VrouterAgent").get("res_table_limit")
+      if res_table_limit == True:
+        tmp = 1
+      else:
+        tmp = 0
+      metric.add_sample('system_defined_vrouter_table_limit_exceeded', value=tmp, labels={"host_id": name})
+
+      ##
+      # system_defined_vrouter_interface
+      ##
+      down_interface_count=value.get("VrouterAgent").get("down_interface_count")
+      metric.add_sample('down_interface_count', value=int (down_interface_count), labels={"host_id": name})
+
+      ##
+      # vRouter perfomance metric
+      ##
       tmp = entry["value"]["VrouterStatsAgent"]
 
       drop_stats = tmp["raw_drop_stats"]
