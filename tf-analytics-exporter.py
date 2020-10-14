@@ -50,7 +50,7 @@ class JsonCollector(object):
       # system_defined_conf_in_correct
       ##
       contrail_config=value.get("ContrailConfig")
-      if contrail_config == None
+      if contrail_config == None:
         tmp = 1
       else:
         tmp = 0
@@ -60,7 +60,7 @@ class JsonCollector(object):
       # system_defined_node_status
       ##
       node_status=value.get("NodeStatus")
-      if node_status == None
+      if node_status == None:
         tmp = 1
       else:
         tmp = 0
@@ -70,7 +70,7 @@ class JsonCollector(object):
       # system_defined_partial_sysinfo
       ##
       node_status_build_info=value.get("NodeStatus").get("build_info")
-      if node_status_build_info == None
+      if node_status_build_info == None:
         tmp = 1
       else:
         tmp = 0
@@ -81,7 +81,7 @@ class JsonCollector(object):
       ##
       running_package_version=value.get("NodeStatus").get("running_package_version")
       installed_package_version=value.get("NodeStatus").get("installed_package_version")
-      if running_package_version == installed_package_version
+      if running_package_version == installed_package_version:
         tmp = 0
       else:
         tmp = 1
@@ -91,7 +91,7 @@ class JsonCollector(object):
       # system_defined_core_files
       ##
       all_core_file_list=value.get("NodeStatus").get("all_core_file_list")
-      if all_core_file_list == None
+      if all_core_file_list == None:
         tmp = 0
       else:
         if len (all_core_file_list) > 0:
@@ -103,45 +103,50 @@ class JsonCollector(object):
       ##
       # system_defined_process_connectivity
       ##
-      node_status_process_status=value.get("process_status")
-      if node_status_process_status == None
+      node_status_process_status=value.get("NodeStatus").get("process_status")
+      #print (value)
+      if node_status_process_status == None:
         tmp = 1
       else:
         tmp = 0
       metric.add_sample('system_defined_process_connectivity', value=tmp, labels={"host_id": name})
 
-      process_status_dict = node_status_process_status
-      for process in process_status_dict:
-        process_status = process_status_dict[process].get("state")
+      process_status_list = node_status_process_status
+      #print (process_status_list)
+      for i in range(len(process_status_list)):
+        process_status = process_status_list[i].get("state")
+        #print (process_status_list[i])
         if process_status == 'Functional':
           tmp = 1
         else:
           tmp = 0
-        metric.add_sample('process_status_' + process, value=tmp, labels={"host_id": name})
+        metric.add_sample('process_status_' + process_status_list[i].get("module_id"), value=tmp, labels={"host_id": name})
 
       ##
       # system_defined_process_status
       ##
-      node_status_process_info=value.get("process_info")
-      if node_status_process_info == None
+      node_status_process_info=value.get("NodeStatus").get("process_info")
+      if node_status_process_info == None:
         tmp = 1
       else:
         tmp = 0
       metric.add_sample('system_defined_process_status', value=tmp, labels={"host_id": name})
 
-      process_status_dict = node_status_process_info
-      for process in process_status_dict:
-        process_info = process_status_dict[process].get("process_state")
+      process_status_list = node_status_process_info
+      for i in range(len(process_status_list)):
+        process_info = process_status_list[i].get("process_state")
+        #print (process_status_list[i])
         if process_info == 'PROCESS_STATE_RUNNING':
           tmp = 1
         else:
           tmp = 0
-        metric.add_sample('process_info_' + process, value=tmp, labels={"host_id": name})
+        metric.add_sample('process_info_' + process_status_list[i].get("process_name"), value=tmp, labels={"host_id": name})
 
       ##
       # system_defined_address_mismatch_control
       ##
-      bgp_router_param_address=value.get("ContrailConfig").get("elements").get("bgp_router_parameters").get("address")
+      ##print dict(json.loads(value.get("ContrailConfig").get("elements").get("bgp_router_parameters"))).get("address")
+      bgp_router_param_address=dict(json.loads(value.get("ContrailConfig").get("elements").get("bgp_router_parameters"))).get("address")
       bgp_router_ip_list=value.get("BgpRouterState").get("bgp_router_ip_list")
       if bgp_router_param_address in bgp_router_ip_list:
         tmp = 0
