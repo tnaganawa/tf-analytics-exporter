@@ -85,7 +85,7 @@ class JsonCollector(object):
         tmp = 0
       else:
         tmp = 1
-      metric.add_sample('system_defined_conf_incorrect', value=tmp, labels={"host_id": name})
+      metric.add_sample('system_defined_package_version_mismatch', value=tmp, labels={"host_id": name})
 
       ##
       # system_defined_core_files
@@ -117,10 +117,10 @@ class JsonCollector(object):
         process_status = process_status_list[i].get("state")
         #print (process_status_list[i])
         if process_status == 'Functional':
-          tmp = 1
-        else:
           tmp = 0
-        metric.add_sample('process_status_' + process_status_list[i].get("module_id"), value=tmp, labels={"host_id": name})
+        else:
+          tmp = 1
+        metric.add_sample('process_status', value=tmp, labels={"host_id": name, "module_id":  process_status_list[i].get("module_id").replace("-","_")})
 
       ##
       # system_defined_process_status
@@ -137,10 +137,10 @@ class JsonCollector(object):
         process_info = process_status_list[i].get("process_state")
         #print (process_status_list[i])
         if process_info == 'PROCESS_STATE_RUNNING':
-          tmp = 1
-        else:
           tmp = 0
-        metric.add_sample('process_info_' + process_status_list[i].get("process_name"), value=tmp, labels={"host_id": name})
+        else:
+          tmp = 1
+        metric.add_sample('process_info', value=tmp, labels={"host_id": name, "process_name": process_status_list[i].get("process_name").replace("-","_")})
 
       ##
       # system_defined_address_mismatch_control
@@ -160,7 +160,7 @@ class JsonCollector(object):
       disk_usage_info_dict=value.get("NodeStatus").get("disk_usage_info")
       for mountpoint in disk_usage_info_dict:
         disk_usage = disk_usage_info_dict[mountpoint].get("percentage_partition_space_used")
-      metric.add_sample('disk_usage_' + mountpoint, value=int(disk_usage), labels={"host_id": name})
+        metric.add_sample('disk_usage_' + mountpoint.replace("-","_").replace("/", "_"), value=int(disk_usage), labels={"host_id": name})
 
       ##
       # system_defined_bgp_connectivity
@@ -208,68 +208,86 @@ class JsonCollector(object):
       ##
       # system_defined_address_mismatch_compute
       ##
-      virtual_router_ip_address=value.get("ContrailConfig").get("elements").get("virtual_router_ip_address")
-      control_ip=value.get("VrouterAgent").get("control_ip")
-      if virtual_router_ip_address == control_ip:
-        tmp = 0
-      else:
-        tmp = 1
-      metric.add_sample('system_defined_address_mismatch_compute', value=tmp, labels={"host_id": name})
+      try:
+        virtual_router_ip_address=value.get("ContrailConfig").get("elements").get("virtual_router_ip_address").replace('"', '')
+        control_ip=value.get("VrouterAgent").get("control_ip")
+        if virtual_router_ip_address == control_ip:
+          tmp = 0
+        else:
+          tmp = 1
+        metric.add_sample('system_defined_address_mismatch_compute', value=tmp, labels={"host_id": name})
+      except:
+        pass
 
       ##
       # system_defined_vrouter_limit_exceeded
       ##
-      res_limit=value.get("VrouterAgent").get("res_limit")
-      if res_limit == True:
-        tmp = 1
-      else:
-        tmp = 0
-      metric.add_sample('system_defined_vrouter_limit_exceeded', value=tmp, labels={"host_id": name})
+      try:
+        res_limit=value.get("VrouterAgent").get("res_limit")
+        if res_limit == True:
+          tmp = 1
+        else:
+          tmp = 0
+        metric.add_sample('system_defined_vrouter_limit_exceeded', value=tmp, labels={"host_id": name})
+      except:
+        pass
 
       ##
       # system_defined_vrouter_table_limit_exceeded
       ##
-      res_table_limit=value.get("VrouterAgent").get("res_table_limit")
-      if res_table_limit == True:
-        tmp = 1
-      else:
-        tmp = 0
-      metric.add_sample('system_defined_vrouter_table_limit_exceeded', value=tmp, labels={"host_id": name})
+      try:
+        res_table_limit=value.get("VrouterAgent").get("res_table_limit")
+        if res_table_limit == True:
+          tmp = 1
+        else:
+          tmp = 0
+        metric.add_sample('system_defined_vrouter_table_limit_exceeded', value=tmp, labels={"host_id": name})
+      except:
+        pass
 
       ##
       # system_defined_vrouter_interface
       ##
-      down_interface_count=value.get("VrouterAgent").get("down_interface_count")
-      metric.add_sample('down_interface_count', value=int (down_interface_count), labels={"host_id": name})
+      try:
+        down_interface_count=value.get("VrouterAgent").get("down_interface_count")
+        metric.add_sample('down_interface_count', value=int (down_interface_count), labels={"host_id": name})
+      except:
+        pass
 
       ##
       # vRouter perfomance metric
       ##
-      tmp = entry["value"]["VrouterStatsAgent"]
+      try:
+        tmp = entry["value"]["VrouterStatsAgent"]
 
-      drop_stats = tmp["raw_drop_stats"]
-      for k in drop_stats:
-        metric.add_sample('drop_stats_'+k, value=drop_stats[k], labels={"host_id": name})
- 
-      flow_rate = tmp["flow_rate"]
-      for k in flow_rate:
-        metric.add_sample('flow_rate_'+k, value=flow_rate[k], labels={"host_id": name})
+        drop_stats = tmp["raw_drop_stats"]
+        for k in drop_stats:
+          metric.add_sample('drop_stats_'+k, value=drop_stats[k], labels={"host_id": name})
 
-      phy_if_stats = tmp["raw_phy_if_stats"]
-      phy_if_stats = phy_if_stats.values()[0]
-      for k in phy_if_stats:
-        metric.add_sample('phy_if_stats_'+k, value=phy_if_stats[k], labels={"host_id": name})
+        flow_rate = tmp["flow_rate"]
+        for k in flow_rate:
+          metric.add_sample('flow_rate_'+k, value=flow_rate[k], labels={"host_id": name})
 
-      tmp = entry["value"]["VrouterControlStats"]
-      rt_table_size = tmp["raw_rt_table_size"]
-      num_of_rt=0
-      num_of_routes=0
-      for k in rt_table_size:
-        num_of_rt+=1
-        for kk in rt_table_size[k]:
-          num_of_routes+=rt_table_size[k][kk]
-      metric.add_sample('num_of_route_tables', value=num_of_rt, labels={"host_id": name})
-      metric.add_sample('num_of_routes', value=num_of_routes, labels={"host_id": name})
+        phy_if_stats = tmp["raw_phy_if_stats"]
+        phy_if_stats = phy_if_stats.values()[0]
+        for k in phy_if_stats:
+          metric.add_sample('phy_if_stats_'+k, value=phy_if_stats[k], labels={"host_id": name})
+      except:
+        pass
+
+      try:
+        tmp = entry["value"]["VrouterControlStats"]
+        rt_table_size = tmp["raw_rt_table_size"]
+        num_of_rt=0
+        num_of_routes=0
+        for k in rt_table_size:
+          num_of_rt+=1
+          for kk in rt_table_size[k]:
+            num_of_routes+=rt_table_size[k][kk]
+        metric.add_sample('num_of_route_tables', value=num_of_rt, labels={"host_id": name})
+        metric.add_sample('num_of_routes', value=num_of_routes, labels={"host_id": name})
+      except:
+        pass
 
     # control introspect
     num_of_vns=os.popen ("ist.py ctr route summary -f text | grep -w name | wc -l").read()
