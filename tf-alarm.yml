@@ -1,0 +1,105 @@
+groups:
+- name: tf-alarm
+  rules:
+  - alert: system_defined_pending_cassandra_compaction_tasks
+    expr: pending_compaction_tasks > 300
+    labels:
+      severity: page
+    annotations:
+      summary: Pending compaction tasks in cassandra crossed the configured threshold.
+  - alert: system_defined_conf_in_correct
+    expr: system_defined_conf_incorrect > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: ContrailConfig missing or incorrect. Configuration pushed to Ifmap as ContrailConfig is missing/incorrect.
+  - alert: system_defined_node_status
+    expr: system_defined_node_status > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Node Failure. NodeStatus UVE not present.
+  - alert: system_defined_partial_sysinfo
+    expr: system_defined_parital_sysinfo > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: System Info Incomplete.
+  - alert: system_defined_package_version_mismatch
+    expr: system_defined_package_version_mismatch > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: There is a mismatch between installed and running package version.
+  - alert: system_defined_core_files
+    expr: system_defined_core_files > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: A core file has been generated on the node.
+  - alert: system_defined_process_connectivity
+    expr: system_defined_process_connectivity > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Process(es) reporting as non-functional.
+  - alert: system_defined_process_connectivity_2
+    expr: process_status > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Process(es) reporting as non-functional.
+  - alert: system_defined_process_status
+    expr: system_defined_process_status > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Process Failure.
+  - alert: system_defined_process_connectivity_2
+    expr: process_info > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Process Failure.
+  - alert: system_defined_address_mismatch_control
+    expr: system_defined_address_mismatch_control > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Control Node IP Address mismatch.
+  - alert: system_defined_bgp_connectivity
+    expr: num_bgp_peer - num_bgp_peer > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: BGP peer mismatch. Not enough BGP peers are up.
+  - alert: system_defined_xmpp_connectivity
+    expr: num_xmpp_peer - num_xmpp_peer > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: XMPP peer mismatch.
+  - alert: system_defined_address_mismatch_compute
+    expr: system_defined_address_mismatch_compute > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Compute Node IP Address mismatch.
+  - alert: system_defined_vrouter_limit_exceeded
+    expr: system_defined_vrouter_limit_exceeded > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Agent resource usage exceeded configured watermark for resource.
+  - alert: system_defined_vrouter_table_limit_exceeded
+    expr: system_defined_vrouter_table_limit_exceeded > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Agent resource usage exceeded table size for resource in vrouter.
+  - alert: system_defined_vrouter_interface
+    expr: down_interface_count > 0.5
+    labels:
+      severity: page
+    annotations:
+      summary: Vrouter interface(s) down.
