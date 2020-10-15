@@ -12,6 +12,9 @@ class JsonCollector(object):
     self.vrouter_endpoint = self._endpoint + 'vrouter/*?flat'
     self.control_endpoint = self._endpoint + 'control-node/*?flat'
     self.config_database_endpoint = self._endpoint + 'config-database-node/*?flat'
+    self.database_endpoint = self._endpoint + 'database-node/*?flat'
+    self.analytics_endpoint = self._endpoint + 'analytics-node/*?flat'
+    self.config_endpoint = self._endpoint + 'config-node/*?flat'
     self.control_api_ip = control_api_ip
     self.config_api_ip = config_api_ip
 
@@ -21,12 +24,25 @@ class JsonCollector(object):
         'metrics for tungsten fabric', 'summary')
 
     ##
-    # config-database node
+    # config-database node / database node
     ##
     url = self.config_database_endpoint
     response = json.loads(requests.get(url).content.decode('UTF-8'))
+    config_database_list=response['value']
+
+    url = self.database_endpoint
+    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    analytics_database_list=response['value']
   
-    for entry in response['value']:
+    url = self.config_endpoint
+    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    config_list=response['value']
+
+    url = self.analytics_endpoint
+    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    analytics_list=response['value']
+
+    for entry in config_database_list + analytics_database_list:
       name = entry["name"]
       value = entry["value"]
 
@@ -41,8 +57,9 @@ class JsonCollector(object):
     ##
     url = self.control_endpoint
     response = json.loads(requests.get(url).content.decode('UTF-8'))
+    control_node_list=response['value']
   
-    for entry in response['value']:
+    for entry in control_node_list: 
       name = entry["name"]
       value = entry["value"]
 
@@ -197,10 +214,10 @@ class JsonCollector(object):
     ##
     url = self.vrouter_endpoint
     response = json.loads(requests.get(url).content.decode('UTF-8'))
-    #print (response)
+    vrouter_node_list = response['value']
   
     # vRouter UVE
-    for entry in response['value']:
+    for entry in vrouter_node_list:
       name = entry["name"]
       value = entry["value"]
 
