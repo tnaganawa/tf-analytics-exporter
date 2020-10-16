@@ -2,8 +2,6 @@
 
 ```
 # pip install prometheus_client requests
-# curl -O https://raw.githubusercontent.com/vcheny/contrail-introspect-cli/master/ist.py
-# cp -ip ist.py /usr/bin/
 # curl -O https://raw.githubusercontent.com/tnaganawa/tf-analytics-exporter/master/tf-analytics-exporter.py
 # ./tf-analytics-exporter.py
  - run this on tungsten fabric control / analytics / config node
