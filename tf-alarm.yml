@@ -61,6 +61,18 @@ groups:
       severity: page
     annotations:
       summary: Process Failure.
+  - alert: system_defined_disk_usage_critical
+    expr: disk_usage > 90
+    labels:
+      severity: page
+    annotations:
+      summary: Disk usage crosses critical threshold limit.
+  - alert: system_defined_disk_usage_high
+    expr: 70 < disk_usage < 90
+    labels:
+      severity: page
+    annotations:
+      summary: Disk usage crosses high threshold limit.
   - alert: system_defined_address_mismatch_control
     expr: system_defined_address_mismatch_control > 0.5
     labels:

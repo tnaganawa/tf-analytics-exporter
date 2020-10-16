@@ -36,21 +36,19 @@ class JsonCollector(object):
   
     url = self.config_endpoint
     response = json.loads(requests.get(url).content.decode('UTF-8'))
-    config_list=response['value']
+    config_node_list=response['value']
 
     url = self.analytics_endpoint
     response = json.loads(requests.get(url).content.decode('UTF-8'))
     analytics_list=response['value']
 
-    for entry in config_database_list + analytics_database_list:
-      name = entry["name"]
-      value = entry["value"]
+    ##
+    # get metrics for vrouters from analytics:
+    ##
+    url = self.vrouter_endpoint
+    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    vrouter_node_list = response['value']
 
-      ##
-      # system_defined_pending_cassandra_compaction_tasks
-      ##
-      pending_compaction_tasks=value.get("CassandraStatusData").get("cassandra_compaction_task").get("pending_compaction_tasks")
-      metric.add_sample('pending_compaction_tasks', value=pending_compaction_tasks, labels={"host_id": name})
 
     ##
     # control-node
@@ -58,10 +56,23 @@ class JsonCollector(object):
     url = self.control_endpoint
     response = json.loads(requests.get(url).content.decode('UTF-8'))
     control_node_list=response['value']
-  
-    for entry in control_node_list: 
+
+    for entry in config_database_list + analytics_database_list:
       name = entry["name"]
       value = entry["value"]
+      node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
+
+      ##
+      # system_defined_pending_cassandra_compaction_tasks
+      ##
+      pending_compaction_tasks=value.get("CassandraStatusData").get("cassandra_compaction_task").get("pending_compaction_tasks")
+      metric.add_sample('pending_compaction_tasks', value=pending_compaction_tasks, labels={"host_id": name, "node_type": node_type})
+
+  
+    for entry in control_node_list + config_node_list + vrouter_node_list + config_database_list + analytics_list + analytics_database_list:
+      name = entry["name"]
+      value = entry["value"]
+      node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
 
       ##
       # system_defined_conf_in_correct
@@ -71,7 +82,7 @@ class JsonCollector(object):
         tmp = 1
       else:
         tmp = 0
-      metric.add_sample('system_defined_conf_incorrect', value=tmp, labels={"host_id": name})
+      metric.add_sample('system_defined_conf_incorrect', value=tmp, labels={"host_id": name, "node_type": node_type})
 
       ##
       # system_defined_node_status
@@ -81,7 +92,7 @@ class JsonCollector(object):
         tmp = 1
       else:
         tmp = 0
-      metric.add_sample('system_defined_node_status', value=tmp, labels={"host_id": name})
+      metric.add_sample('system_defined_node_status', value=tmp, labels={"host_id": name, "node_type": node_type})
 
       ##
       # system_defined_partial_sysinfo
@@ -91,7 +102,7 @@ class JsonCollector(object):
         tmp = 1
       else:
         tmp = 0
-      metric.add_sample('system_defined_parital_sysinfo', value=tmp, labels={"host_id": name})
+      metric.add_sample('system_defined_parital_sysinfo', value=tmp, labels={"host_id": name, "node_type": node_type})
 
       ##
       # system_defined_package_version_mismatch
@@ -102,7 +113,7 @@ class JsonCollector(object):
         tmp = 0
       else:
         tmp = 1
-      metric.add_sample('system_defined_package_version_mismatch', value=tmp, labels={"host_id": name})
+      metric.add_sample('system_defined_package_version_mismatch', value=tmp, labels={"host_id": name, "node_type": node_type})
 
       ##
       # system_defined_core_files
@@ -115,7 +126,7 @@ class JsonCollector(object):
           tmp = 1
         else:
           tmp = 0
-      metric.add_sample('system_defined_core_files', value=tmp, labels={"host_id": name})
+      metric.add_sample('system_defined_core_files', value=tmp, labels={"host_id": name, "node_type": node_type})
 
       ##
       # system_defined_process_connectivity
@@ -126,7 +137,7 @@ class JsonCollector(object):
         tmp = 1
       else:
         tmp = 0
-      metric.add_sample('system_defined_process_connectivity', value=tmp, labels={"host_id": name})
+      metric.add_sample('system_defined_process_connectivity', value=tmp, labels={"host_id": name, "node_type": node_type})
 
       process_status_list = node_status_process_status
       #print (process_status_list)
@@ -137,7 +148,7 @@ class JsonCollector(object):
           tmp = 0
         else:
           tmp = 1
-        metric.add_sample('process_status', value=tmp, labels={"host_id": name, "module_id":  process_status_list[i].get("module_id").replace("-","_")})
+        metric.add_sample('process_status', value=tmp, labels={"host_id": name, "module_id":  process_status_list[i].get("module_id").replace("-","_"), "node_type": node_type})
 
       ##
       # system_defined_process_status
@@ -147,7 +158,7 @@ class JsonCollector(object):
         tmp = 1
       else:
         tmp = 0
-      metric.add_sample('system_defined_process_status', value=tmp, labels={"host_id": name})
+      metric.add_sample('system_defined_process_status', value=tmp, labels={"host_id": name, "node_type": node_type})
 
       process_status_list = node_status_process_info
       for i in range(len(process_status_list)):
@@ -157,7 +168,21 @@ class JsonCollector(object):
           tmp = 0
         else:
           tmp = 1
-        metric.add_sample('process_info', value=tmp, labels={"host_id": name, "process_name": process_status_list[i].get("process_name").replace("-","_")})
+        metric.add_sample('process_info', value=tmp, labels={"host_id": name, "process_name": process_status_list[i].get("process_name").replace("-","_"), "node_type": node_type})
+
+      ##
+      # system_defined_disk_usage_high / critical
+      ##
+      disk_usage_info_dict=value.get("NodeStatus").get("disk_usage_info")
+      for mountpoint in disk_usage_info_dict:
+        disk_usage = disk_usage_info_dict[mountpoint].get("percentage_partition_space_used")
+        metric.add_sample('disk_usage', value=int(disk_usage), labels={"host_id": name, "node_type": node_type, "mountpoint": mountpoint.replace("-","_").replace("/", "_")})
+
+
+
+    for entry in control_node_list:
+      name = entry["name"]
+      value = entry["value"]
 
       ##
       # system_defined_address_mismatch_control
@@ -170,14 +195,6 @@ class JsonCollector(object):
       else:
         tmp = 1
       metric.add_sample('system_defined_address_mismatch_control', value=tmp, labels={"host_id": name})
-
-      ##
-      # system_defined_disk_usage_high / critical
-      ##
-      disk_usage_info_dict=value.get("NodeStatus").get("disk_usage_info")
-      for mountpoint in disk_usage_info_dict:
-        disk_usage = disk_usage_info_dict[mountpoint].get("percentage_partition_space_used")
-        metric.add_sample('disk_usage_' + mountpoint.replace("-","_").replace("/", "_"), value=int(disk_usage), labels={"host_id": name})
 
       ##
       # system_defined_bgp_connectivity
@@ -209,13 +226,6 @@ class JsonCollector(object):
     ###
 
 
-    ##
-    # get metrics for vrouters from analytics:
-    ##
-    url = self.vrouter_endpoint
-    response = json.loads(requests.get(url).content.decode('UTF-8'))
-    vrouter_node_list = response['value']
-  
     # vRouter UVE
     for entry in vrouter_node_list:
       name = entry["name"]
@@ -306,21 +316,21 @@ class JsonCollector(object):
       except:
         pass
 
-    # control introspect
-    num_of_vns=os.popen ("ist.py ctr route summary -f text | grep -w name | wc -l").read()
-    metric.add_sample('num_of_route_tables', value=num_of_vns, labels={"host_id": self.control_api_ip})
-    num_of_routes=os.popen ("ist.py ctr route summary -f text | grep -w prefixes | awk -F: '{sum+=$2}; END{print sum}'").read()
-    metric.add_sample('num_of_routes', value=num_of_routes, labels={"host_id": self.control_api_ip})
-    num_of_routing_instances=os.popen ("ist.py ctr ri -f text | grep '^  name' | wc -l").read()
-    metric.add_sample('num_of_routing_instances', value=num_of_routing_instances, labels={"host_id": self.control_api_ip})
-    num_of_bgp_blocks=os.popen ("ist.py ctr bgp_stats | grep -w blocked_count | awk -F: '{sum+=$2}; END{print sum}'").read()
-    metric.add_sample('num_of_bgp_blocks', value=num_of_bgp_blocks, labels={"host_id": self.control_api_ip})
-    num_of_bgp_calls=os.popen ("ist.py ctr bgp_stats | grep -w calls | awk -F: '{sum+=$2}; END{print sum}'").read()
-    metric.add_sample('num_of_bgp_calls', value=num_of_bgp_calls, labels={"host_id": self.control_api_ip})
-    num_of_xmpp_blocks=os.popen ("ist.py ctr xmpp stats -f text | grep -w blocked_count | awk -F: '{sum+=$2}; END{print sum}'").read()
-    metric.add_sample('num_of_xmpp_blocks', value=num_of_xmpp_blocks, labels={"host_id": self.control_api_ip})
-    num_of_xmpp_calls=os.popen ("ist.py ctr xmpp stats -f text | grep -w calls | awk -F: '{sum+=$2}; END{print sum}'").read()
-    metric.add_sample('num_of_xmpp_calls', value=num_of_xmpp_calls, labels={"host_id": self.control_api_ip})
+    ## control introspect
+    #num_of_vns=os.popen ("ist.py ctr route summary -f text | grep -w name | wc -l").read()
+    #metric.add_sample('num_of_route_tables', value=num_of_vns, labels={"host_id": self.control_api_ip})
+    #num_of_routes=os.popen ("ist.py ctr route summary -f text | grep -w prefixes | awk -F: '{sum+=$2}; END{print sum}'").read()
+    #metric.add_sample('num_of_routes', value=num_of_routes, labels={"host_id": self.control_api_ip})
+    #num_of_routing_instances=os.popen ("ist.py ctr ri -f text | grep '^  name' | wc -l").read()
+    #metric.add_sample('num_of_routing_instances', value=num_of_routing_instances, labels={"host_id": self.control_api_ip})
+    #num_of_bgp_blocks=os.popen ("ist.py ctr bgp_stats | grep -w blocked_count | awk -F: '{sum+=$2}; END{print sum}'").read()
+    #metric.add_sample('num_of_bgp_blocks', value=num_of_bgp_blocks, labels={"host_id": self.control_api_ip})
+    #num_of_bgp_calls=os.popen ("ist.py ctr bgp_stats | grep -w calls | awk -F: '{sum+=$2}; END{print sum}'").read()
+    #metric.add_sample('num_of_bgp_calls', value=num_of_bgp_calls, labels={"host_id": self.control_api_ip})
+    #num_of_xmpp_blocks=os.popen ("ist.py ctr xmpp stats -f text | grep -w blocked_count | awk -F: '{sum+=$2}; END{print sum}'").read()
+    #metric.add_sample('num_of_xmpp_blocks', value=num_of_xmpp_blocks, labels={"host_id": self.control_api_ip})
+    #num_of_xmpp_calls=os.popen ("ist.py ctr xmpp stats -f text | grep -w calls | awk -F: '{sum+=$2}; END{print sum}'").read()
+    #metric.add_sample('num_of_xmpp_calls', value=num_of_xmpp_calls, labels={"host_id": self.control_api_ip})
 
     # configdb
     config_api_url = 'http://' + self.config_api_ip + ':8082/'
