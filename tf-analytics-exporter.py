@@ -359,7 +359,7 @@ if __name__ == '__main__':
   # Usage: tf-analytics-exporter.py
   http_port=11234
   start_http_server(int(http_port))
-  analytics_api_ip=os.popen("netstat -ntlp | grep -w 8081 | awk '{print $4}' | awk -F: '{print $1}'").read().rstrip()
+  analytics_api_ip=os.popen("ss -ntlp | grep -w 8081 | awk '{print $4}' | awk -F: '{print $1}'").read().rstrip()
   control_api_ip=analytics_api_ip ## temporary
   config_api_ip=analytics_api_ip ## temporary
   #print(analytics_api_ip)
