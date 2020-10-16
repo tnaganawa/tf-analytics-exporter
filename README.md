@@ -50,3 +50,12 @@ docker run --net=host -v /root/prometheus.yml:/etc/prometheus/prometheus.yml -v 
 
 # docker run -d -p 3000:3000 grafana/grafana
 ```
+
+[build]
+
+```
+cd tf-analytics-exporter
+docker build -t tnaganawa/tf-analytics-exporter .
+docker login
+docker push tnaganawa/tf-analytics-exporter
+```
