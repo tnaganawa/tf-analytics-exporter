@@ -68,7 +68,7 @@ class JsonCollector(object):
       pending_compaction_tasks=value.get("CassandraStatusData").get("cassandra_compaction_task").get("pending_compaction_tasks")
       metric.add_sample('pending_compaction_tasks', value=pending_compaction_tasks, labels={"host_id": name, "node_type": node_type})
 
-  
+
     for entry in control_node_list + config_node_list + vrouter_node_list + config_database_list + analytics_list + analytics_database_list:
       name = entry["name"]
       value = entry["value"]
@@ -187,30 +187,38 @@ class JsonCollector(object):
       ##
       # system_defined_address_mismatch_control
       ##
-      ##print dict(json.loads(value.get("ContrailConfig").get("elements").get("bgp_router_parameters"))).get("address")
-      bgp_router_param_address=dict(json.loads(value.get("ContrailConfig").get("elements").get("bgp_router_parameters"))).get("address")
-      bgp_router_ip_list=value.get("BgpRouterState").get("bgp_router_ip_list")
-      if bgp_router_param_address in bgp_router_ip_list:
-        tmp = 0
-      else:
-        tmp = 1
-      metric.add_sample('system_defined_address_mismatch_control', value=tmp, labels={"host_id": name})
+      try:
+        bgp_router_param_address=dict(json.loads(value.get("ContrailConfig").get("elements").get("bgp_router_parameters"))).get("address")
+        bgp_router_ip_list=value.get("BgpRouterState").get("bgp_router_ip_list")
+        if bgp_router_param_address in bgp_router_ip_list:
+          tmp = 0
+        else:
+          tmp = 1
+        metric.add_sample('system_defined_address_mismatch_control', value=tmp, labels={"host_id": name})
+      except:
+        pass
 
-      ##
-      # system_defined_bgp_connectivity
-      ##
-      num_up_bgp_peer=value.get("BgpRouterState").get("num_up_bgp_peer")
-      num_bgp_peer=value.get("BgpRouterState").get("num_bgp_peer")
-      metric.add_sample('num_up_bgp_peer', value=num_up_bgp_peer, labels={"host_id": name})
-      metric.add_sample('num_bgp_peer', value=num_bgp_peer, labels={"host_id": name})
+        ##
+        # system_defined_bgp_connectivity
+        ##
+      try:
+        num_up_bgp_peer=value.get("BgpRouterState").get("num_up_bgp_peer")
+        num_bgp_peer=value.get("BgpRouterState").get("num_bgp_peer")
+        metric.add_sample('num_up_bgp_peer', value=num_up_bgp_peer, labels={"host_id": name})
+        metric.add_sample('num_bgp_peer', value=num_bgp_peer, labels={"host_id": name})
+      except:
+        pass
 
-      ##
-      # system_defined_xmpp_connectivity
-      ##
-      num_up_xmpp_peer=value.get("BgpRouterState").get("num_up_xmpp_peer")
-      num_xmpp_peer=value.get("BgpRouterState").get("num_xmpp_peer")
-      metric.add_sample('num_up_xmpp_peer', value=num_up_xmpp_peer, labels={"host_id": name})
-      metric.add_sample('num_xmpp_peer', value=num_xmpp_peer, labels={"host_id": name})
+        ##
+        # system_defined_xmpp_connectivity
+        ##
+      try:
+        num_up_xmpp_peer=value.get("BgpRouterState").get("num_up_xmpp_peer")
+        num_xmpp_peer=value.get("BgpRouterState").get("num_xmpp_peer")
+        metric.add_sample('num_up_xmpp_peer', value=num_up_xmpp_peer, labels={"host_id": name})
+        metric.add_sample('num_xmpp_peer', value=num_xmpp_peer, labels={"host_id": name})
+      except:
+        pass
 
     ###
     # system_defined_prouter_connectivity: not added
@@ -353,7 +361,7 @@ class JsonCollector(object):
 
     yield metric
 
-  
+
 
 if __name__ == '__main__':
   # Usage: tf-analytics-exporter.py

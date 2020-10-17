@@ -5,7 +5,7 @@ alerting:
   alertmanagers:
   - static_configs:
     - targets:
-      # - alertmanager:9093
+      - 127.0.0.1:9093
 rule_files:
   - tf-alarm.yml
 scrape_configs:
