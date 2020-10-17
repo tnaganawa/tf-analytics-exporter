@@ -21,7 +21,11 @@ or
 ```
 curl -O https://raw.githubusercontent.com/tnaganawa/tf-analytics-exporter/master/prometheus.yml
 curl -O https://raw.githubusercontent.com/tnaganawa/tf-analytics-exporter/master/tf-alarm.yml
-docker run --net=host -v /root/prometheus.yml:/etc/prometheus/prometheus.yml -v /root/tf-alarm.yml:/etc/prometheus/tf-alarm.yml prom/prometheus
+docker run -d --net=host -v /root/prometheus.yml:/etc/prometheus/prometheus.yml -v /root/tf-alarm.yml:/etc/prometheus/tf-alarm.yml prom/prometheus
+
+curl -O https://raw.githubusercontent.com/tnaganawa/tf-analytics-exporter/master/alertmanager.yml
+docker run -d --net=host -v /root/alertmanager.yml:/etc/alertmanager/alertmanager.yml prom/alertmanager
+
 
 # curl localhost:9090/api/v1/alerts | python -m json.tool
 {
