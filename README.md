@@ -62,4 +62,12 @@ cd tf-analytics-exporter
 docker build -t tnaganawa/tf-analytics-exporter .
 docker login
 docker push tnaganawa/tf-analytics-exporter
+
+or
+dnf install -y podman git
+git clone https://github.com/tnaganawa/tf-analytics-exporter.git
+cd tf-analytics-exporter
+podman build -t docker.io/tnaganawa/tf-analytics-exporter .
+podman login docker.io
+podman push docker.io/tnaganawa/tf-analytics-exporter
 ```
