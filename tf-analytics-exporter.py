@@ -6,8 +6,10 @@ import json
 import requests
 from prometheus_client import start_http_server, Metric, REGISTRY
 
+vnc_api_headers = {"Content-Type": "application/json", "charset": "UTF-8"}
+
 class JsonCollector(object):
-  def __init__(self, analytics_api_ip, control_api_ip, config_api_ip):
+  def __init__(self, analytics_api_ip, control_api_ip, config_api_ip, keystone_api_ip):
     self._endpoint = 'http://' + analytics_api_ip + ':8081/analytics/uves/'
     self.vrouter_endpoint = self._endpoint + 'vrouter/*?flat'
     self.control_endpoint = self._endpoint + 'control-node/*?flat'
@@ -17,8 +19,22 @@ class JsonCollector(object):
     self.config_endpoint = self._endpoint + 'config-node/*?flat'
     self.control_api_ip = control_api_ip
     self.config_api_ip = config_api_ip
+    self.keystone_api_ip = keystone_api_ip
 
   def collect(self):
+
+    # get keystone token
+    url = 'http://' + self.keystone_api_ip + ':35357/auth/tokens?nocatalog'
+    os_auth_type = 'password'
+    os_username = 'admin'
+    os_password = 'contrail123'
+    os_project_domain_name = 'Default'
+    os_project_name = 'admin'
+    keystone_data = {"auth": {"identity": {"methods": ["{}".format(os_auth_type)], "password": {"user": {"name": "{}".format(os_username), "password": "{}.format(os_password)", "domain": {"name": "{}".format(os_project_domain_name)}}}}, "scope": {"project": {"name": "{}".format(os_project_name), "domain": {"name": "{}".format(os_project_domain_name)}}}}}
+    response = requests.post(url, data=json.dumps(keystone_data), headers=vnc_api_headers)
+    js = json.loads(response.text)
+    keystone_token = js.get("access").get("token").get("id")
+    vnc_api_headers["x-auth-token"]=keystone_token
 
     metric = Metric('tungstenfabric_metrics',
         'metrics for tungsten fabric', 'summary')
@@ -27,26 +43,26 @@ class JsonCollector(object):
     # config-database node / database node
     ##
     url = self.config_database_endpoint
-    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
     config_database_list=response['value']
 
     url = self.database_endpoint
-    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
     analytics_database_list=response['value']
   
     url = self.config_endpoint
-    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
     config_node_list=response['value']
 
     url = self.analytics_endpoint
-    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
     analytics_list=response['value']
 
     ##
     # get metrics for vrouters from analytics:
     ##
     url = self.vrouter_endpoint
-    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
     vrouter_node_list = response['value']
 
 
@@ -54,7 +70,7 @@ class JsonCollector(object):
     # control-node
     ##
     url = self.control_endpoint
-    response = json.loads(requests.get(url).content.decode('UTF-8'))
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
     control_node_list=response['value']
 
     for entry in config_database_list + analytics_database_list:
@@ -343,19 +359,19 @@ class JsonCollector(object):
     # configdb
     config_api_url = 'http://' + self.config_api_ip + ':8082/'
 
-    response = json.loads(requests.get(config_api_url + 'virtual-networks').content.decode('UTF-8'))
+    response = json.loads(requests.get(config_api_url + 'virtual-networks', headers=vnc_api_headers).content.decode('UTF-8'))
     num_of_virtual_networks = len(response['virtual-networks'])
     metric.add_sample('num_of_virtual_networks', value=num_of_virtual_networks, labels={"host_id": self.config_api_ip})
 
-    response = json.loads(requests.get(config_api_url + 'logical-routers').content.decode('UTF-8'))
+    response = json.loads(requests.get(config_api_url + 'logical-routers', headers=vnc_api_headers).content.decode('UTF-8'))
     num_of_logical_routers = len(response['logical-routers'])
     metric.add_sample('num_of_logical_routers', value=num_of_logical_routers, labels={"host_id": self.config_api_ip})
 
-    response = json.loads(requests.get(config_api_url + 'projects').content.decode('UTF-8'))
+    response = json.loads(requests.get(config_api_url + 'projects', headers=vnc_api_headers).content.decode('UTF-8'))
     num_of_projects = len(response['projects'])
     metric.add_sample('num_of_projects', value=num_of_projects, labels={"host_id": self.config_api_ip})
 
-    response = json.loads(requests.get(config_api_url + 'virtual-machine-interfaces').content.decode('UTF-8'))
+    response = json.loads(requests.get(config_api_url + 'virtual-machine-interfaces', headers=vnc_api_headers).content.decode('UTF-8'))
     num_of_virtual_machine_interfaces = len(response['virtual-machine-interfaces'])
     metric.add_sample('num_of_virtual_machine_interfaces', value=num_of_virtual_machine_interfaces, labels={"host_id": self.config_api_ip})
 
@@ -370,8 +386,9 @@ if __name__ == '__main__':
   analytics_api_ip=os.popen("ss -ntlp | grep -w 8081 | awk '{print $4}' | awk -F: '{print $1}'").read().rstrip()
   control_api_ip=analytics_api_ip ## temporary
   config_api_ip=analytics_api_ip ## temporary
+  keystone_api_ip=analytics_api_ip ## temporary
   #print(analytics_api_ip)
-  REGISTRY.register(JsonCollector(analytics_api_ip, control_api_ip, config_api_ip))
+  REGISTRY.register(JsonCollector(analytics_api_ip, control_api_ip, config_api_ip, keystone_api_ip))
 
   while True: time.sleep(1)
 
