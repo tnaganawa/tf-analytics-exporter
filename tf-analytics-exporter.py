@@ -24,12 +24,13 @@ class JsonCollector(object):
   def collect(self):
 
     # get keystone token
-    url = 'http://' + self.keystone_api_ip + ':35357/auth/tokens?nocatalog'
-    os_auth_type = 'password'
-    os_username = 'admin'
-    os_password = 'contrail123'
-    os_project_domain_name = 'Default'
-    os_project_name = 'admin'
+    os_auth_url = os.getenv('OS_AUTH_URL', 'http://' + self.keystone_api_ip + ':35357/v3')
+    url = os_auth_url + '/auth/tokens?nocatalog'
+    os_auth_type = os.getenv('OS_AUTH_TYPE', 'password')
+    os_username = os.getenv('OS_USER_NAME', 'admin')
+    os_password = os.getenv('OS_PASSWORD', 'contrail123')
+    os_project_domain_name = os.getenv('OS_PROJECT_DOMAIN_NAME', 'Default')
+    os_project_name = os.getenv('OS_PROJECT_NAME', 'admin')
     keystone_data = {"auth": {"identity": {"methods": ["{}".format(os_auth_type)], "password": {"user": {"name": "{}".format(os_username), "password": "{}.format(os_password)", "domain": {"name": "{}".format(os_project_domain_name)}}}}, "scope": {"project": {"name": "{}".format(os_project_name), "domain": {"name": "{}".format(os_project_domain_name)}}}}}
     response = requests.post(url, data=json.dumps(keystone_data), headers=vnc_api_headers)
     js = json.loads(response.text)
@@ -381,13 +382,13 @@ class JsonCollector(object):
 
 if __name__ == '__main__':
   # Usage: tf-analytics-exporter.py
-  http_port=11234
+  http_port=os.getenv(TF_EXPORTER_HTTP_PORT, 11234)
   start_http_server(int(http_port))
   analytics_api_ip=os.popen("ss -ntlp | grep -w 8081 | awk '{print $4}' | awk -F: '{print $1}'").read().rstrip()
-  control_api_ip=analytics_api_ip ## temporary
-  config_api_ip=analytics_api_ip ## temporary
+  analytics_api_ip=os.getenv(TF_EXPORTER_ANALYTICS_IP, analytics_api_ip)
+  control_api_ip=os.get.env(TF_EXPORTER_CONTROL_IP, analytics_api_ip)
+  config_api_ip=os.get.env(TF_EXPORTER_CONFIG_IP, analytics_api_ip)
   keystone_api_ip=analytics_api_ip ## temporary
-  #print(analytics_api_ip)
   REGISTRY.register(JsonCollector(analytics_api_ip, control_api_ip, config_api_ip, keystone_api_ip))
 
   while True: time.sleep(1)
