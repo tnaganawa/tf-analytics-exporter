@@ -31,10 +31,9 @@ class JsonCollector(object):
     os_password = os.getenv('OS_PASSWORD', 'contrail123')
     os_project_domain_name = os.getenv('OS_PROJECT_DOMAIN_NAME', 'Default')
     os_project_name = os.getenv('OS_PROJECT_NAME', 'admin')
-    keystone_data = {"auth": {"identity": {"methods": ["{}".format(os_auth_type)], "password": {"user": {"name": "{}".format(os_username), "password": "{}.format(os_password)", "domain": {"name": "{}".format(os_project_domain_name)}}}}, "scope": {"project": {"name": "{}".format(os_project_name), "domain": {"name": "{}".format(os_project_domain_name)}}}}}
+    keystone_data = {"auth": {"identity": {"methods": ["{}".format(os_auth_type)], "password": {"user": {"name": "{}".format(os_username), "password": "{}".format(os_password), "domain": {"name": "{}".format(os_project_domain_name)}}}}, "scope": {"project": {"name": "{}".format(os_project_name), "domain": {"name": "{}".format(os_project_domain_name)}}}}}
     response = requests.post(url, data=json.dumps(keystone_data), headers=vnc_api_headers)
-    js = json.loads(response.text)
-    keystone_token = js.get("access").get("token").get("id")
+    keystone_token = response.headers.get("X-Subject-Token")
     vnc_api_headers["x-auth-token"]=keystone_token
 
     metric = Metric('tungstenfabric_metrics',
@@ -160,12 +159,13 @@ class JsonCollector(object):
       #print (process_status_list)
       for i in range(len(process_status_list)):
         process_status = process_status_list[i].get("state")
+        process_status_description = process_status_list[i].get("description")
         #print (process_status_list[i])
         if process_status == 'Functional':
           tmp = 0
         else:
           tmp = 1
-        metric.add_sample('process_status', value=tmp, labels={"host_id": name, "module_id":  process_status_list[i].get("module_id").replace("-","_"), "node_type": node_type})
+        metric.add_sample('process_status', value=tmp, labels={"host_id": name, "module_id":  process_status_list[i].get("module_id").replace("-","_"), "node_type": node_type, "description": str(process_status_description)})
 
       ##
       # system_defined_process_status
@@ -382,12 +382,12 @@ class JsonCollector(object):
 
 if __name__ == '__main__':
   # Usage: tf-analytics-exporter.py
-  http_port=os.getenv(TF_EXPORTER_HTTP_PORT, 11234)
+  http_port=os.getenv('TF_EXPORTER_HTTP_PORT', 11234)
   start_http_server(int(http_port))
   analytics_api_ip=os.popen("ss -ntlp | grep -w 8081 | awk '{print $4}' | awk -F: '{print $1}'").read().rstrip()
-  analytics_api_ip=os.getenv(TF_EXPORTER_ANALYTICS_IP, analytics_api_ip)
-  control_api_ip=os.get.env(TF_EXPORTER_CONTROL_IP, analytics_api_ip)
-  config_api_ip=os.get.env(TF_EXPORTER_CONFIG_IP, analytics_api_ip)
+  analytics_api_ip=os.getenv('TF_EXPORTER_ANALYTICS_IP', analytics_api_ip)
+  control_api_ip=os.getenv('TF_EXPORTER_CONTROL_IP', analytics_api_ip)
+  config_api_ip=os.getenv('TF_EXPORTER_CONFIG_IP', analytics_api_ip)
   keystone_api_ip=analytics_api_ip ## temporary
   REGISTRY.register(JsonCollector(analytics_api_ip, control_api_ip, config_api_ip, keystone_api_ip))
 
