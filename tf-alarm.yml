@@ -80,13 +80,13 @@ groups:
     annotations:
       summary: Control Node IP Address mismatch.
   - alert: system_defined_bgp_connectivity
-    expr: num_bgp_peer - num_bgp_peer > 0.5
+    expr: num_bgp_peer - num_up_bgp_peer > 0.5
     labels:
       severity: page
     annotations:
       summary: BGP peer mismatch. Not enough BGP peers are up.
   - alert: system_defined_xmpp_connectivity
-    expr: num_xmpp_peer - num_xmpp_peer > 0.5
+    expr: num_xmpp_peer - num_up_xmpp_peer > 0.5
     labels:
       severity: page
     annotations:
