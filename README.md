@@ -53,7 +53,8 @@ docker run -d --net=host --name alertmanager -v /root/alertmanager.yml:/etc/aler
 ...
 
 
-# docker run -d -p 3000:3000 grafana/grafana
+# docker run -d --net=host -e GF_SERVER_HTTP_PORT=3001 --name=grafana grafana/grafana
+ -> add promtheus data source, and import TungstenFabric-grafana.json as a dashboard
 ```
 
 [build]
@@ -65,6 +66,7 @@ docker login
 docker push tnaganawa/tf-analytics-exporter
 
 or
+
 dnf install -y podman git
 git clone https://github.com/tnaganawa/tf-analytics-exporter.git
 cd tf-analytics-exporter

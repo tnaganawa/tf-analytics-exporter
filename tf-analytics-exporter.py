@@ -17,6 +17,7 @@ class JsonCollector(object):
     self.database_endpoint = self._endpoint + 'database-node/*?flat'
     self.analytics_endpoint = self._endpoint + 'analytics-node/*?flat'
     self.config_endpoint = self._endpoint + 'config-node/*?flat'
+    self.prouter_endpoint = self._endpoint + 'prouter/*?flat'
     self.control_api_ip = control_api_ip
     self.config_api_ip = config_api_ip
     self.keystone_api_ip = keystone_api_ip
@@ -38,6 +39,22 @@ class JsonCollector(object):
 
     metric = Metric('tungstenfabric_metrics',
         'metrics for tungsten fabric', 'summary')
+
+
+    ##
+    # physical-router
+    ##
+    url = self.prouter_endpoint
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
+    prouter_list=response['value']
+    for entry in prouter_list:
+      name = entry["name"]
+      value = entry["value"]
+      try:
+       total_commits_sent_since_up = value.get("UvePhysicalRouterConfig").get("total_commits_sent_since_up")
+       metric.add_sample('total_commits_sent_since_up', value=total_commits_sent_since_up, labels={"host_id": name})
+      except:
+        pass
 
     ##
     # config-database node / database node
@@ -89,6 +106,22 @@ class JsonCollector(object):
       name = entry["name"]
       value = entry["value"]
       node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
+
+      try:
+        one_min_avg=value.get("NodeStatus").get("system_cpu_usage").get("one_min_avg")
+        cpu_share=value.get("NodeStatus").get("system_cpu_usage").get("cpu_share")
+        mem_used=value.get("NodeStatus").get("system_mem_usage").get("used")
+        mem_total=value.get("NodeStatus").get("system_mem_usage").get("total")
+        #metric.add_sample('one_min_avg', value=one_min_avg, labels={"host_id": name, "node_type": node_type})
+        #metric.add_sample('cpu_share', value=cpu_share, labels={"host_id": name, "node_type": node_type})
+        #metric.add_sample('mem_used', value=mem_used, labels={"host_id": name, "node_type": node_type})
+        #metric.add_sample('mem_total', value=mem_total, labels={"host_id": name, "node_type": node_type})
+        metric.add_sample('one_min_avg', value=one_min_avg, labels={"host_id": name})
+        metric.add_sample('cpu_share', value=cpu_share, labels={"host_id": name})
+        metric.add_sample('mem_used', value=mem_used, labels={"host_id": name})
+        metric.add_sample('mem_total', value=mem_total, labels={"host_id": name})
+      except:
+        pass
 
       ##
       # system_defined_conf_in_correct
@@ -368,6 +401,24 @@ class JsonCollector(object):
     num_of_logical_routers = len(response['logical-routers'])
     metric.add_sample('num_of_logical_routers', value=num_of_logical_routers, labels={"host_id": self.config_api_ip})
 
+    response = json.loads(requests.get(config_api_url + 'config-nodes', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_config_nodes = len(response['config-nodes'])
+    metric.add_sample('num_of_config_nodes', value=num_of_config_nodes, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'analytics-nodes', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_analytics_nodes = len(response['analytics-nodes'])
+    metric.add_sample('num_of_analytics_nodes', value=num_of_analytics_nodes, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'config-database-nodes', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_config_database_nodes = len(response['config-database-nodes'])
+    metric.add_sample('num_of_config_database_nodes', value=num_of_config_database_nodes, labels={"host_id": self.config_api_ip})
+
+    #response = json.loads(requests.get(config_api_url + 'database-nodes', headers=vnc_api_headers).content.decode('UTF-8'))
+    #num_of_analytics_database_nodes = len(response['database-nodes'])
+    #metric.add_sample('num_of_config_database_nodes', value=num_of_config_database_nodes, labels={"host_id": self.config_api_ip})
+
+    ## control / vRouter
+
     response = json.loads(requests.get(config_api_url + 'projects', headers=vnc_api_headers).content.decode('UTF-8'))
     num_of_projects = len(response['projects'])
     metric.add_sample('num_of_projects', value=num_of_projects, labels={"host_id": self.config_api_ip})
@@ -375,6 +426,33 @@ class JsonCollector(object):
     response = json.loads(requests.get(config_api_url + 'virtual-machine-interfaces', headers=vnc_api_headers).content.decode('UTF-8'))
     num_of_virtual_machine_interfaces = len(response['virtual-machine-interfaces'])
     metric.add_sample('num_of_virtual_machine_interfaces', value=num_of_virtual_machine_interfaces, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'virtual-machines', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_virtual_machines = len(response['virtual-machines'])
+    metric.add_sample('num_of_virtual_machines', value=num_of_virtual_machines, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'virtual-routers', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_vrouters = len(response['virtual-routers'])
+    metric.add_sample('num_of_vrouters', value=num_of_vrouters, labels={"host_id": self.config_api_ip})
+
+    ## fabric
+
+    response = json.loads(requests.get(config_api_url + 'fabrics', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_fabrics = len(response['fabrics'])
+    metric.add_sample('num_of_fabrics', value=num_of_fabrics, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'physical-routers', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_physical_routers = len(response['physical-routers'])
+    metric.add_sample('num_of_physical_routers', value=num_of_physical_routers, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'virtual-port-groups', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_virtual_port_groups = len(response['virtual-port-groups'])
+    metric.add_sample('num_of_virtual_port_groups', value=num_of_virtual_port_groups, labels={"host_id": self.config_api_ip})
+
+    response = json.loads(requests.get(config_api_url + 'physical-interfaces', headers=vnc_api_headers).content.decode('UTF-8'))
+    num_of_physical_interfaces = len(response['physical-interfaces'])
+    metric.add_sample('num_of_physical_interfaces', value=num_of_physical_interfaces, labels={"host_id": self.config_api_ip})
+
 
     yield metric
 
