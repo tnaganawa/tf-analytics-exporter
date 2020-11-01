@@ -121,3 +121,9 @@ groups:
       severity: page
     annotations:
       summary: number of Functional vRouters is less than 2. managed service by svc-monitor cannot be started.
+  - alert: loadbalancer pool status is down
+    expr: loadbalancer_pool_status < 0.5
+    labels:
+      severity: email
+    annotations:
+      summary: loadbalancer pool status is down. some service is not served.

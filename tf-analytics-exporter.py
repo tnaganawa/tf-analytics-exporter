@@ -18,6 +18,7 @@ class JsonCollector(object):
     self.analytics_endpoint = self._endpoint + 'analytics-node/*?flat'
     self.config_endpoint = self._endpoint + 'config-node/*?flat'
     self.prouter_endpoint = self._endpoint + 'prouter/*?flat'
+    self.loadbalancer_endpoint = self._endpoint + 'loadbalancer/*?flat'
     self.control_api_ip = control_api_ip
     self.config_api_ip = config_api_ip
     self.keystone_api_ip = keystone_api_ip
@@ -55,6 +56,33 @@ class JsonCollector(object):
        metric.add_sample('total_commits_sent_since_up', value=total_commits_sent_since_up, labels={"host_id": name})
       except:
         pass
+
+    ##
+    # loadbalancer
+    ##
+    url = self.loadbalancer_endpoint
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
+    loadbalancer_list=response['value']
+    for entry in loadbalancer_list:
+      name = entry["name"]
+      value = entry["value"]
+      #try:
+      if (1):
+       loadbalancer_pool= value.get("UveLoadbalancerStats").get("pool").items()[0][1]
+       loadbalancer_pool_status = loadbalancer_pool.get("status")
+       if loadbalancer_pool_status == "ACTIVE":
+        loadbalancer_pool_status_tmp = 1
+       else:
+        loadbalancer_pool_status_tmp = 0
+       loadbalancer_active_connections = loadbalancer_pool.get("active_connections")
+       loadbalancer_bytes_in = loadbalancer_pool.get("bytes_in")
+       loadbalancer_bytes_out = loadbalancer_pool.get("bytes_out")
+       metric.add_sample('loadbalancer_pool_status', value=loadbalancer_pool_status_tmp, labels={"host_id": name, "loadbalancer_name": name})
+       metric.add_sample('loadbalancer_active_connections', value=loadbalancer_active_connections, labels={"host_id": name, "loadbalancer_name": name})
+       metric.add_sample('loadbalancer_bytes_in', value=loadbalancer_bytes_in, labels={"host_id": name, "loadbalancer_name": name})
+       metric.add_sample('loadbalancer_bytes_out', value=loadbalancer_bytes_out, labels={"host_id": name, "loadbalancer_name": name})
+      #except:
+      #  pass
 
     ##
     # config-database node / database node
