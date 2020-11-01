@@ -115,3 +115,9 @@ groups:
       severity: page
     annotations:
       summary: Vrouter interface(s) down.
+  - alert: number of Functional vRouters is less than 2
+    expr: count(process_status{node_type="vrouter", module_id="contrail_vrouter_agent"} == 0) < 2
+    labels:
+      severity: page
+    annotations:
+      summary: number of Functional vRouters is less than 2. managed service by svc-monitor cannot be started.
