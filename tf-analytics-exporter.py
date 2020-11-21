@@ -25,18 +25,21 @@ class JsonCollector(object):
 
   def collect(self):
 
-    # get keystone token
-    os_auth_url = os.getenv('OS_AUTH_URL', 'http://' + self.keystone_api_ip + ':35357/v3')
-    url = os_auth_url + '/auth/tokens?nocatalog'
-    os_auth_type = os.getenv('OS_AUTH_TYPE', 'password')
-    os_username = os.getenv('OS_USER_NAME', 'admin')
-    os_password = os.getenv('OS_PASSWORD', 'contrail123')
-    os_project_domain_name = os.getenv('OS_PROJECT_DOMAIN_NAME', 'Default')
-    os_project_name = os.getenv('OS_PROJECT_NAME', 'admin')
-    keystone_data = {"auth": {"identity": {"methods": ["{}".format(os_auth_type)], "password": {"user": {"name": "{}".format(os_username), "password": "{}".format(os_password), "domain": {"name": "{}".format(os_project_domain_name)}}}}, "scope": {"project": {"name": "{}".format(os_project_name), "domain": {"name": "{}".format(os_project_domain_name)}}}}}
-    response = requests.post(url, data=json.dumps(keystone_data), headers=vnc_api_headers)
-    keystone_token = response.headers.get("X-Subject-Token")
-    vnc_api_headers["x-auth-token"]=keystone_token
+    # get keystone token (if keystone access is not available, skip this)
+    try:
+      os_auth_url = os.getenv('OS_AUTH_URL', 'http://' + self.keystone_api_ip + ':35357/v3')
+      url = os_auth_url + '/auth/tokens?nocatalog'
+      os_auth_type = os.getenv('OS_AUTH_TYPE', 'password')
+      os_username = os.getenv('OS_USER_NAME', 'admin')
+      os_password = os.getenv('OS_PASSWORD', 'contrail123')
+      os_project_domain_name = os.getenv('OS_PROJECT_DOMAIN_NAME', 'Default')
+      os_project_name = os.getenv('OS_PROJECT_NAME', 'admin')
+      keystone_data = {"auth": {"identity": {"methods": ["{}".format(os_auth_type)], "password": {"user": {"name": "{}".format(os_username), "password": "{}".format(os_password), "domain": {"name": "{}".format(os_project_domain_name)}}}},"scope": {"project": {"name": "{}".format(os_project_name), "domain": {"name": "{}".format(os_project_domain_name)}}}}}
+      response = requests.post(url, data=json.dumps(keystone_data), headers=vnc_api_headers)
+      keystone_token = response.headers.get("X-Subject-Token")
+      vnc_api_headers["x-auth-token"]=keystone_token
+    except:
+      pass
 
     metric = Metric('tungstenfabric_metrics',
         'metrics for tungsten fabric', 'summary')
@@ -66,8 +69,7 @@ class JsonCollector(object):
     for entry in loadbalancer_list:
       name = entry["name"]
       value = entry["value"]
-      #try:
-      if (1):
+      try:
        loadbalancer_pool= value.get("UveLoadbalancerStats").get("pool").items()[0][1]
        loadbalancer_pool_status = loadbalancer_pool.get("status")
        if loadbalancer_pool_status == "ACTIVE":
@@ -81,8 +83,8 @@ class JsonCollector(object):
        metric.add_sample('loadbalancer_active_connections', value=loadbalancer_active_connections, labels={"host_id": name, "loadbalancer_name": name})
        metric.add_sample('loadbalancer_bytes_in', value=loadbalancer_bytes_in, labels={"host_id": name, "loadbalancer_name": name})
        metric.add_sample('loadbalancer_bytes_out', value=loadbalancer_bytes_out, labels={"host_id": name, "loadbalancer_name": name})
-      #except:
-      #  pass
+      except:
+        pass
 
     ##
     # config-database node / database node
@@ -121,19 +123,26 @@ class JsonCollector(object):
     for entry in config_database_list + analytics_database_list:
       name = entry["name"]
       value = entry["value"]
-      node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
+      try:
+        node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
 
-      ##
-      # system_defined_pending_cassandra_compaction_tasks
-      ##
-      pending_compaction_tasks=value.get("CassandraStatusData").get("cassandra_compaction_task").get("pending_compaction_tasks")
-      metric.add_sample('pending_compaction_tasks', value=pending_compaction_tasks, labels={"host_id": name, "node_type": node_type})
+        ##
+        # system_defined_pending_cassandra_compaction_tasks
+        ##
+        pending_compaction_tasks=value.get("CassandraStatusData").get("cassandra_compaction_task").get("pending_compaction_tasks")
+        metric.add_sample('pending_compaction_tasks', value=pending_compaction_tasks, labels={"host_id": name, "node_type": node_type})
+      except:
+       pass
 
 
     for entry in control_node_list + config_node_list + vrouter_node_list + config_database_list + analytics_list + analytics_database_list:
       name = entry["name"]
       value = entry["value"]
-      node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
+      try:
+        node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
+      except AttributeError:
+        # some feature such as analytics-database is not deployed, so skip this
+        continue
 
       try:
         one_min_avg=value.get("NodeStatus").get("system_cpu_usage").get("one_min_avg")
