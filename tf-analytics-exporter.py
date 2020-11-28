@@ -19,6 +19,7 @@ class JsonCollector(object):
     self.config_endpoint = self._endpoint + 'config-node/*?flat'
     self.prouter_endpoint = self._endpoint + 'prouter/*?flat'
     self.loadbalancer_endpoint = self._endpoint + 'loadbalancer/*?flat'
+    self.virtualmachineinterface_endpoint = self._endpoint + 'virtual-machine-interface/*?flat'
     self.control_api_ip = control_api_ip
     self.config_api_ip = config_api_ip
     self.keystone_api_ip = keystone_api_ip
@@ -87,6 +88,44 @@ class JsonCollector(object):
         pass
 
     ##
+    # virtual-machine-interface
+    ##
+    url = self.virtualmachineinterface_endpoint
+    response = json.loads(requests.get(url, headers=vnc_api_headers).content.decode('UTF-8'))
+    vmi_list=response['value']
+    for entry in vmi_list:
+      name = entry["name"]
+      value = entry["value"]
+      try:
+       vmi_stat = value.get("VMIStats")
+       in_bw_usage = vmi_stat.get("in_bw_usage")
+       out_bw_usage = vmi_stat.get("out_bw_usage")
+       in_bytes = vmi_stat.get("raw_if_stats").get("in_bytes")
+       out_bytes = vmi_stat.get("raw_if_stats").get("out_bytes")
+       in_pkts = vmi_stat.get("raw_if_stats").get("in_pkts")
+       out_pkts = vmi_stat.get("raw_if_stats").get("out_pkts")
+       total_drop_stats = 0
+       drop_stats_dict = vmi_stat.get("raw_drop_stats")
+       for drop_reason in drop_stats_dict:
+         total_drop_stats += drop_stats_dict[drop_reason]
+       virtual_network = vmi_stat.get("virtual_network", "")
+       vm_name = vmi_stat.get("vm_name", "")
+       if vm_name == None:
+         vm_name = ""
+       #vm_uuid = vmi_stat.get("vm_uuid", "")
+
+       metric.add_sample('vmi_in_bw_usage', value=in_bw_usage, labels={"vmi_name": name, "virtual_network": virtual_network, "vm_name": vm_name})
+       metric.add_sample('vmi_out_bw_usage', value=out_bw_usage, labels={"vmi_name": name, "virtual_network": virtual_network, "vm_name": vm_name})
+       metric.add_sample('vmi_in_bytes', value=in_bytes, labels={"vmi_name": name, "virtual_network": virtual_network, "vm_name": vm_name})
+       metric.add_sample('vmi_out_bytes', value=out_bytes, labels={"vmi_name": name, "virtual_network": virtual_network, "vm_name": vm_name})
+       metric.add_sample('vmi_in_pkts', value=in_pkts, labels={"vmi_name": name, "virtual_network": virtual_network, "vm_name": vm_name})
+       metric.add_sample('vmi_out_pkts', value=out_pkts, labels={"vmi_name": name, "virtual_network": virtual_network, "vm_name": vm_name})
+       metric.add_sample('vmi_drop_stats_total', value=total_drop_stats, labels={"vmi_name": name, "virtual_network": virtual_network, "vm_name": vm_name})
+
+      except:
+        pass
+
+    ##
     # config-database node / database node
     ##
     url = self.config_database_endpoint
@@ -138,11 +177,6 @@ class JsonCollector(object):
     for entry in control_node_list + config_node_list + vrouter_node_list + config_database_list + analytics_list + analytics_database_list:
       name = entry["name"]
       value = entry["value"]
-      try:
-        node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
-      except AttributeError:
-        # some feature such as analytics-database is not deployed, so skip this
-        continue
 
       try:
         one_min_avg=value.get("NodeStatus").get("system_cpu_usage").get("one_min_avg")
@@ -159,6 +193,12 @@ class JsonCollector(object):
         metric.add_sample('mem_total', value=mem_total, labels={"host_id": name})
       except:
         pass
+
+      try:
+        node_type=value.get("NodeStatus").get("system_cpu_usage").get("node_type")
+      except AttributeError:
+        # some feature such as analytics-database is not deployed, so skip this
+        continue
 
       ##
       # system_defined_conf_in_correct
